@@ -23,6 +23,12 @@ codex_args  =
 # claude_args = --allow-dangerously-skip-permissions
 # codex_args  = --dangerously-bypass-approvals-and-sandbox
 
+# Make the real `claude` / `codex` commands go through AISwitch too, so you
+# get the active provider, flags and proxy no matter which name you type.
+# `command codex` still reaches the unwrapped binary when you need it.
+# shadow_claude = 1
+# shadow_codex  = 1
+
 # Proxy applied when launching. Usually you want the per-side defaults below:
 # external relays go through a tunnel, an internal gateway does not. A provider
 # can also set its own `proxy` to override. Unset means "leave the shell alone".

@@ -414,6 +414,15 @@ cdx() {
 }
 
 # ---------------------------------------------------------------------------
+# Optionally shadow the real `claude` / `codex` commands, so typing the tool's
+# own name goes through AISwitch (provider, flags, proxy) instead of its
+# stock config. The launchers call `command claude` / `command codex`, so
+# this cannot recurse. Off unless enabled in config.
+# ---------------------------------------------------------------------------
+[[ "$(_aisw_get default shadow_claude)" == (1|true|yes) ]] && claude() { cc "$@" }
+[[ "$(_aisw_get default shadow_codex)"  == (1|true|yes) ]] && codex()  { cdx "$@" }
+
+# ---------------------------------------------------------------------------
 # completion
 # ---------------------------------------------------------------------------
 _aisw_complete() {

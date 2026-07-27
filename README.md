@@ -129,6 +129,22 @@ the calling shell.
 AISW_CLAUDE_ARGS='' cc          # drop the configured flags just this once
 ```
 
+### Shadowing the real commands
+
+Reaching for `cc` instead of `claude` is a habit you have to keep. If you'd
+rather the tool's own name did the right thing, turn on shadowing:
+
+```ini
+[default]
+shadow_claude = 1
+shadow_codex  = 1
+```
+
+Now `claude` and `codex` route through AISwitch — active provider, configured
+flags, configured proxy — while `command claude` / `command codex` still reach
+the unwrapped binaries. This is off by default, since shadowing a real command
+name is the kind of thing you should opt into knowingly.
+
 ## Notes
 
 Keys sit in plaintext in `~/.aisw/config` — `chmod 600` it. This is the same
