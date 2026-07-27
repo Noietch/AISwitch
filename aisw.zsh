@@ -372,6 +372,11 @@ _aisw_set_proxy() {  # $1 = resolved proxy value; called in the launcher subshel
   esac
 }
 
+# An existing alias of the same name makes the function definitions below a
+# parse error, so drop any first. Common when migrating from hand-written
+# `alias cc='ANTHROPIC_BASE_URL=... claude'` setups.
+unalias cc cdx claude codex 2>/dev/null
+
 cc() {
   # Subshell: a one-shot -P never leaks into the calling shell.
   (

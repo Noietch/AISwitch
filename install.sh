@@ -37,6 +37,14 @@ fi
 chmod 700 "$DEST" 2>/dev/null || true
 
 # --- ~/.zshrc hook ----------------------------------------------------------
+# Strip hand-written aliases we're replacing. An alias shadows the function of
+# the same name and makes sourcing aisw.zsh a parse error.
+if [ -f "$ZSHRC" ] && grep -qE "^[[:space:]]*alias[[:space:]]+[\"']?(cc|cdx|claude|codex)=" "$ZSHRC"; then
+  cp "$ZSHRC" "$ZSHRC.aisw-backup"
+  sed -i -E "/^[[:space:]]*alias[[:space:]]+[\"']?(cc|cdx|claude|codex)=/d" "$ZSHRC"
+  ok "removed old cc/cdx/claude/codex aliases (backup: $ZSHRC.aisw-backup)"
+fi
+
 if [ -f "$ZSHRC" ] && grep -qF 'aisw.zsh' "$ZSHRC"; then
   inf "$ZSHRC already sources aisw.zsh"
 else
@@ -60,5 +68,5 @@ command -v fzf >/dev/null 2>&1 || { echo; inf "fzf not found — the interactive
 echo
 ok "done"
 echo "  1. edit   $DEST/config"
-echo "  2. reload exec zsh"
+echo "  2. reload exec zsh      (not 'source ~/.zshrc' — that keeps stale aliases)"
 echo "  3. run    aisw ls"
