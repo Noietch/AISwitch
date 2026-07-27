@@ -23,12 +23,13 @@ codex_args  =
 # claude_args = --allow-dangerously-skip-permissions
 # codex_args  = --dangerously-bypass-approvals-and-sandbox
 
-# Proxy applied when launching. Also settable per provider, which is the point:
-# a provider behind a corporate gateway can set `proxy = none` while an external
-# one routes through a tunnel. Unset means "leave the shell's proxy alone".
+# Proxy applied when launching. Usually you want the per-side defaults below:
+# external relays go through a tunnel, an internal gateway does not. A provider
+# can also set its own `proxy` to override. Unset means "leave the shell alone".
 #   proxy = http://127.0.0.1:7890     use this proxy
-#   proxy = none                      clear proxy vars for this provider
-# proxy =
+#   proxy = none                      clear proxy vars
+# claude_proxy =
+# codex_proxy  = http://127.0.0.1:7890
 
 
 # ------------------------------------------------------------ Claude providers

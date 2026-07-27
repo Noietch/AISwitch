@@ -134,7 +134,9 @@ _aisw_apply() {
   if [[ $kind == claude ]]; then
     local m p
     m="$(_aisw_get "$sec" model)"; [[ -z $m ]] && m="$(_aisw_get default claude_model)"
-    p="$(_aisw_get "$sec" proxy)"; [[ -z $p ]] && p="$(_aisw_get default proxy)"
+    p="$(_aisw_get "$sec" proxy)"
+    [[ -z $p ]] && p="$(_aisw_get default claude_proxy)"
+    [[ -z $p ]] && p="$(_aisw_get default proxy)"
     export ANTHROPIC_BASE_URL="$base" ANTHROPIC_AUTH_TOKEN="$key"
     if [[ -n $m ]]; then
       export ANTHROPIC_MODEL="$m" ANTHROPIC_SMALL_FAST_MODEL="$m" \
@@ -148,7 +150,9 @@ _aisw_apply() {
     m="$(_aisw_get "$sec" model)";  [[ -z $m ]] && m="$(_aisw_get default codex_model)"
     e="$(_aisw_get "$sec" effort)"; [[ -z $e ]] && e="$(_aisw_get default codex_effort)"
     w="$(_aisw_get "$sec" wire)";   [[ -z $w ]] && w="$(_aisw_get default codex_wire)"
-    p="$(_aisw_get "$sec" proxy)";  [[ -z $p ]] && p="$(_aisw_get default proxy)"
+    p="$(_aisw_get "$sec" proxy)"
+    [[ -z $p ]] && p="$(_aisw_get default codex_proxy)"
+    [[ -z $p ]] && p="$(_aisw_get default proxy)"
     export CODEX_BASE_URL="$base" AISW_CODEX_KEY="$key" \
            CODEX_MODEL="$m" CODEX_REASONING_EFFORT="$e" CODEX_WIRE_API="${w:-responses}"
     export AISW_CODEX_LABEL="$(_aisw_get "$sec" label)"
@@ -404,7 +408,7 @@ cdx() {
     [[ -n $CODEX_EXTRA_CONF       ]] && conf+=(${(z)CODEX_EXTRA_CONF})
 
     local args="${AISW_CODEX_ARGS-$(_aisw_get default codex_args)}"
-    print -P -- "%F{242}[codex] ${AISW_LABEL} · ${CODEX_MODEL} · $CODEX_BASE_URL%f"
+    print -P -- "%F{242}[codex] ${AISW_CODEX_LABEL} · ${CODEX_MODEL} · $CODEX_BASE_URL%f"
     command codex $conf ${=args} "$@"
   )
 }

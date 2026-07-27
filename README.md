@@ -73,17 +73,19 @@ codex_effort = high
 claude_args = --allow-dangerously-skip-permissions
 codex_args  = --dangerously-bypass-approvals-and-sandbox
 
+# proxy per side — most setups need this rather than per provider
+claude_proxy = none                    # internal, no proxy
+codex_proxy  = http://127.0.0.1:7890   # external
+
 [claude.work]
 label = work gateway
 base  = https://gateway.example.com/v1/anthropic/
 key   = xxxxxxxx
-proxy = none                    # this one is internal
 
 [codex.relay-a]
 label = relay A
 base  = https://relay-a.example.com
 key   = sk-xxxxxxxx
-proxy = http://127.0.0.1:7890   # this one isn't
 ```
 
 Adding a provider is four lines. Model, args and proxy live in `[default]` so
@@ -91,8 +93,8 @@ providers only carry the endpoint and key — set any of them on a provider to
 override.
 
 `proxy` accepts a URL, `none` to clear the proxy for that provider, or nothing
-at all to leave the shell's proxy untouched. Useful when an internal gateway
-and an external relay need opposite settings.
+at all to leave the shell's proxy untouched. Resolution goes: the provider's
+own `proxy`, then `claude_proxy` / `codex_proxy`, then a shared `proxy`.
 
 Anything in an `[env]` section is exported verbatim on every switch.
 
