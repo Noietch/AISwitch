@@ -18,15 +18,18 @@ AISW_DIR="${AISW_DIR:-$HOME/.aisw}"
 AISW_CONFIG="${AISW_CONFIG:-$AISW_DIR/config}"
 
 # Cleared on every switch so a provider's values never leak into the next one.
+# Label/proxy are per-kind: both sides are active at once, so a single shared
+# variable would let whichever was applied last win.
 typeset -ga _AISW_CLAUDE_VARS=(
   ANTHROPIC_BASE_URL ANTHROPIC_AUTH_TOKEN ANTHROPIC_API_KEY ANTHROPIC_MODEL
   ANTHROPIC_SMALL_FAST_MODEL ANTHROPIC_REASONING_MODEL ANTHROPIC_CUSTOM_HEADERS
   ANTHROPIC_DEFAULT_HAIKU_MODEL ANTHROPIC_DEFAULT_SONNET_MODEL ANTHROPIC_DEFAULT_OPUS_MODEL
-  AISW_LABEL
+  AISW_CLAUDE_LABEL AISW_CLAUDE_PROXY
 )
 typeset -ga _AISW_CODEX_VARS=(
   AISW_CODEX_KEY CODEX_BASE_URL CODEX_WIRE_API CODEX_MODEL
-  CODEX_REVIEW_MODEL CODEX_REASONING_EFFORT CODEX_EXTRA_CONF AISW_LABEL
+  CODEX_REVIEW_MODEL CODEX_REASONING_EFFORT CODEX_EXTRA_CONF
+  AISW_CODEX_LABEL AISW_CODEX_PROXY
 )
 
 _aisw_say() { print -P -- "%F{cyan}›%f $*" }
@@ -128,24 +131,28 @@ _aisw_apply() {
     export "${pair%%=*}"="${pair#*=}"
   done
 
-  export AISW_LABEL="$(_aisw_get "$sec" label)"
-
   if [[ $kind == claude ]]; then
-    local m="$(_aisw_get "$sec" model)"
-    [[ -z $m ]] && m="$(_aisw_get default claude_model)"
+    local m p
+    m="$(_aisw_get "$sec" model)"; [[ -z $m ]] && m="$(_aisw_get default claude_model)"
+    p="$(_aisw_get "$sec" proxy)"; [[ -z $p ]] && p="$(_aisw_get default proxy)"
     export ANTHROPIC_BASE_URL="$base" ANTHROPIC_AUTH_TOKEN="$key"
     if [[ -n $m ]]; then
       export ANTHROPIC_MODEL="$m" ANTHROPIC_SMALL_FAST_MODEL="$m" \
              ANTHROPIC_DEFAULT_OPUS_MODEL="$m" ANTHROPIC_DEFAULT_SONNET_MODEL="$m" \
              ANTHROPIC_DEFAULT_HAIKU_MODEL="$m"
     fi
+    export AISW_CLAUDE_LABEL="$(_aisw_get "$sec" label)"
+    [[ -n $p ]] && export AISW_CLAUDE_PROXY="$p"
   else
-    local m e w
+    local m e w p
     m="$(_aisw_get "$sec" model)";  [[ -z $m ]] && m="$(_aisw_get default codex_model)"
     e="$(_aisw_get "$sec" effort)"; [[ -z $e ]] && e="$(_aisw_get default codex_effort)"
     w="$(_aisw_get "$sec" wire)";   [[ -z $w ]] && w="$(_aisw_get default codex_wire)"
+    p="$(_aisw_get "$sec" proxy)";  [[ -z $p ]] && p="$(_aisw_get default proxy)"
     export CODEX_BASE_URL="$base" AISW_CODEX_KEY="$key" \
            CODEX_MODEL="$m" CODEX_REASONING_EFFORT="$e" CODEX_WIRE_API="${w:-responses}"
+    export AISW_CODEX_LABEL="$(_aisw_get "$sec" label)"
+    [[ -n $p ]] && export AISW_CODEX_PROXY="$p"
   fi
 
   print -r -- "$sec" > "$AISW_DIR/current.$kind"
@@ -352,14 +359,26 @@ _aisw_oneshot() {  # handle `-P <name>`; called inside a subshell
   fi
 }
 
+_aisw_set_proxy() {  # $1 = resolved proxy value; called in the launcher subshell
+  case "$1" in
+    ""|inherit) ;;                                    # leave the shell as-is
+    none|off)   unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY ;;
+    *)          export http_proxy="$1" https_proxy="$1" \
+                       HTTP_PROXY="$1" HTTPS_PROXY="$1" ;;
+  esac
+}
+
 cc() {
   # Subshell: a one-shot -P never leaks into the calling shell.
   (
     _aisw_oneshot claude "$@" || exit 1
     shift $_AISW_SHIFT
     [[ -n $ANTHROPIC_BASE_URL ]] || { _aisw_err "no active claude provider — run: aisw use <name>"; exit 1 }
-    print -P -- "%F{242}[claude] ${AISW_LABEL} · ${ANTHROPIC_MODEL}%f"
-    command claude ${=AISW_CLAUDE_ARGS} "$@"
+    _aisw_set_proxy "$AISW_CLAUDE_PROXY"
+    # Env var wins, so you can override for one command without editing config.
+    local args="${AISW_CLAUDE_ARGS-$(_aisw_get default claude_args)}"
+    print -P -- "%F{242}[claude] ${AISW_CLAUDE_LABEL} · ${ANTHROPIC_MODEL}%f"
+    command claude ${=args} "$@"
   )
 }
 
@@ -369,11 +388,12 @@ cdx() {
     shift $_AISW_SHIFT
     [[ -n $CODEX_BASE_URL && -n $AISW_CODEX_KEY ]] || {
       _aisw_err "no active codex provider — run: aisw use <name>"; exit 1 }
+    _aisw_set_proxy "$AISW_CODEX_PROXY"
 
     # Everything via -c: never touches ~/.codex/auth.json or its config.toml provider.
     local -a conf=(
       -c "model_provider=aisw"
-      -c "model_providers.aisw.name=\"${AISW_LABEL:-aisw}\""
+      -c "model_providers.aisw.name=\"${AISW_CODEX_LABEL:-aisw}\""
       -c "model_providers.aisw.base_url=\"$CODEX_BASE_URL\""
       -c "model_providers.aisw.wire_api=\"${CODEX_WIRE_API:-responses}\""
       -c "model_providers.aisw.env_key=\"AISW_CODEX_KEY\""
@@ -383,8 +403,9 @@ cdx() {
     [[ -n $CODEX_REASONING_EFFORT ]] && conf+=(-c "model_reasoning_effort=\"$CODEX_REASONING_EFFORT\"")
     [[ -n $CODEX_EXTRA_CONF       ]] && conf+=(${(z)CODEX_EXTRA_CONF})
 
+    local args="${AISW_CODEX_ARGS-$(_aisw_get default codex_args)}"
     print -P -- "%F{242}[codex] ${AISW_LABEL} · ${CODEX_MODEL} · $CODEX_BASE_URL%f"
-    command codex $conf ${=AISW_CODEX_ARGS} "$@"
+    command codex $conf ${=args} "$@"
   )
 }
 

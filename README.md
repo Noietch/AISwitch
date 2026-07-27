@@ -40,15 +40,15 @@ provider are separate selections.
 ## Install
 
 ```sh
-git clone https://github.com/<you>/AISwitch.git ~/.aisw-src
-mkdir -p ~/.aisw
-cp ~/.aisw-src/aisw.zsh    ~/.aisw/aisw.zsh
-cp ~/.aisw-src/config.example ~/.aisw/config
-chmod 600 ~/.aisw/config
-echo 'source ~/.aisw/aisw.zsh' >> ~/.zshrc
+git clone https://github.com/Noietch/AISwitch.git
+cd AISwitch && ./install.sh
 ```
 
-Then edit `~/.aisw/config` with your real keys and open a new shell.
+Then edit `~/.aisw/config` with your keys and run `exec zsh`.
+
+The installer copies `aisw.zsh` and a starter config into `~/.aisw`, adds the
+source line to `~/.zshrc`, and warns about the `settings.json` conflict below.
+Re-running it upgrades `aisw.zsh` and never touches your config.
 
 `fzf` is optional — it powers the interactive picker. Without it, use
 `aisw <name>` directly.
@@ -59,7 +59,7 @@ If `~/.claude/settings.json` has an `"env"` block containing `ANTHROPIC_*`
 keys, **remove it**. Values there take precedence over the environment, so
 switching would appear to work while Claude Code silently keeps using the old
 provider. Move anything non-provider-specific into the `[env]` section of
-`~/.aisw/config`.
+`~/.aisw/config`. The installer flags this if it finds it.
 
 ## Config
 
@@ -69,19 +69,30 @@ claude_model = claude-opus-4-6
 codex_model  = gpt-5.1-codex
 codex_effort = high
 
+# appended to every launch; empty by default
+claude_args = --allow-dangerously-skip-permissions
+codex_args  = --dangerously-bypass-approvals-and-sandbox
+
 [claude.work]
 label = work gateway
 base  = https://gateway.example.com/v1/anthropic/
 key   = xxxxxxxx
+proxy = none                    # this one is internal
 
 [codex.relay-a]
 label = relay A
 base  = https://relay-a.example.com
 key   = sk-xxxxxxxx
+proxy = http://127.0.0.1:7890   # this one isn't
 ```
 
-Adding a provider is four lines. The model lives in `[default]` so providers
-only carry the endpoint and key — add `model = …` to a provider to override it.
+Adding a provider is four lines. Model, args and proxy live in `[default]` so
+providers only carry the endpoint and key — set any of them on a provider to
+override.
+
+`proxy` accepts a URL, `none` to clear the proxy for that provider, or nothing
+at all to leave the shell's proxy untouched. Useful when an internal gateway
+and an external relay need opposite settings.
 
 Anything in an `[env]` section is exported verbatim on every switch.
 
@@ -107,14 +118,13 @@ exercises the same auth path and endpoint the tool actually uses — a bare
 `cc -P` / `cdx -P` run in a subshell, so a one-shot override never leaks into
 the calling shell.
 
-### Passing default flags
+### Overriding for one command
 
-Set `AISW_CLAUDE_ARGS` / `AISW_CODEX_ARGS` in your `.zshrc` to add flags to
-every launch:
+`AISW_CLAUDE_ARGS` / `AISW_CODEX_ARGS` take precedence over `claude_args` /
+`codex_args` in the config, so you can change flags for a single run:
 
 ```sh
-export AISW_CLAUDE_ARGS='--allow-dangerously-skip-permissions'
-export AISW_CODEX_ARGS='--dangerously-bypass-approvals-and-sandbox'
+AISW_CLAUDE_ARGS='' cc          # drop the configured flags just this once
 ```
 
 ## Notes
