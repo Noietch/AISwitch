@@ -1,0 +1,4 @@
+# Never commit real keys
+config
+*.env
+current.*

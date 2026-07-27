@@ -1,0 +1,53 @@
+# AISwitch config — copy to ~/.aisw/config and fill in your own providers.
+#
+#   [claude.<name>] or [codex.<name>]
+#     label = shown in listings
+#     base  = API base URL
+#     key   = API key / token
+#   optional per-provider overrides: model / wire / effort
+#
+# Adding a provider = appending four lines. Nothing else to touch.
+
+[default]
+# Set the model once here; providers only carry the endpoint + key.
+claude_model = claude-opus-4-6
+codex_model  = gpt-5.1-codex
+codex_effort = high
+codex_wire   = responses
+
+
+# ------------------------------------------------------------ Claude providers
+[claude.anthropic]
+label = Anthropic official
+base  = https://api.anthropic.com
+key   = sk-ant-xxxxxxxxxxxxxxxx
+
+[claude.relay-a]
+label = some relay
+base  = https://relay.example.com/v1/anthropic/
+key   = sk-xxxxxxxxxxxxxxxx
+# per-provider override, remove to use [default]
+# model = claude-sonnet-4-5
+
+
+# ------------------------------------------------------------- Codex providers
+[codex.openai]
+label = OpenAI official
+base  = https://api.openai.com/v1
+key   = sk-xxxxxxxxxxxxxxxx
+
+[codex.relay-b]
+label = some relay
+base  = https://relay.example.com
+key   = sk-xxxxxxxxxxxxxxxx
+# wire = chat
+
+
+# ---------------------------------------------------------------------------
+# Extra environment variables, exported verbatim on every switch.
+# Handy if you moved settings out of ~/.claude/settings.json (see README).
+# ---------------------------------------------------------------------------
+[env]
+# MAX_THINKING_TOKENS           = 128000
+# CLAUDE_CODE_MAX_OUTPUT_TOKENS = 32000
+# DISABLE_TELEMETRY             = 1
